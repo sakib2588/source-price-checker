@@ -37,6 +37,7 @@ STATUSES = [
     ("COULD_NOT_CHECK", "Could not check", "Open the source links by hand", "FFF3CD", "664D03"),
     ("MASKURA_GONE", "Maskura page gone", "Fix or remove the Maskura link", "F1AEB5", "58151C"),
     ("SOURCE_DEARER", "Source costs the same or more", "Find a cheaper source or raise the price", "FFE5D0", "8A3C00"),
+    ("VARIANT_UNCLEAR", "Variation not named", "Add the variation to the source link (?var=)", "FFF3CD", "664D03"),
     ("MASKURA_UNREADABLE", "Maskura page not read", "Open the Maskura link by hand", "FFF3CD", "664D03"),
     ("OK", "OK", "Nothing to do", "D1E7DD", "0F5132"),
     ("NO_MASKURA_LINK", "No Maskura link in the sheet", "Add the Maskura link to the sheet", "E2E3E5", "41464B"),
@@ -45,7 +46,7 @@ STATUSES = [
 ]
 STATUS = {k: (w, todo, fill, fg) for k, w, todo, fill, fg in STATUSES}
 HOW = {"link": "Variant in the link", "single": "Only one price", "name": "Matching variant name",
-       "cheapest": "Cheapest variant", "product": "Product price"}
+       "cheapest": "Cheapest variant", "product": "Product price", "variations": "Each variation compared"}
 CHECK_CHOICES = ["Not checked yet", "Checker is right", "Checker is wrong", "Fixed"]
 CHECK_COLORS = {"Checker is right": ("D1E7DD", "0F5132"), "Checker is wrong": ("F8D7DA", "842029"),
                 "Fixed": ("CFE2FF", "084298")}
@@ -131,12 +132,17 @@ def decide(p, srcs):
     linked = [raw for _, url, raw, _ in srcs if url]
     if status == "NO_BUYABLE_SOURCE" and linked and all(s.get("verdict") in UNREAD for s in linked):
         status = "COULD_NOT_CHECK"
-    mp, how = None, None
+    mp, how, sp = None, None, None
     if m and best:
-        mp, how = sc_variants.compare_price(m, sources[best - 1])
+        vr = sc_variants.variation_range(m, sources[best - 1])
+        if vr is not None:
+            mp, how, sp = vr["maskura_price"], "variations", vr["source_price"]
+        else:
+            mp, how = sc_variants.compare_price(m, sources[best - 1])
+            sp = sources[best - 1].get("price_gbp")
     elif m and m.get("price_gbp"):
         mp, how = float(m["price_gbp"]), "product"
-    return m, status, best, notes, mp, how
+    return m, status, best, notes, mp, how, sp
 
 
 def style_header(ws, columns, fills):
@@ -167,7 +173,7 @@ def fill_rule(fill, fg=None, bold=False):
     return dict(fill=PatternFill("solid", fgColor=fill, bgColor=fill), font=Font(color=fg, bold=bold) if fg else None)
 
 
-def reason_text(status, srcs, mp, best):
+def reason_text(status, srcs, mp, best, sp=None):
     """The Reason column: which problem the product has, in plain words, or It's okay."""
     def per_source(only_unread=False):
         parts = [f"Source {slot}: {result_words(raw).lower()}" for slot, url, raw, _ in srcs
@@ -181,10 +187,17 @@ def reason_text(status, srcs, mp, best):
         return "Could not check, source page did not load" + per_source(only_unread=True)
     if status == "SOURCE_DEARER":
         raw = next((r for slot, url, r, _ in srcs if slot == best), {})
-        if mp is not None and raw.get("price_gbp") is not None:
-            return (f"Source costs the same or more (Maskura £{mp:,.2f}, Source {best} "
-                    f"£{float(raw['price_gbp']):,.2f})")
+        sp = sp if sp is not None else raw.get("price_gbp")
+        if mp is not None and sp is not None:
+            return f"Source costs the same or more (Maskura £{mp:,.2f}, Source {best} £{float(sp):,.2f})"
         return "Source costs the same or more"
+    if status == "VARIANT_UNCLEAR":
+        raw = next((r for slot, url, r, _ in srcs if slot == best), {})
+        prices = [p for _, p in sc_variants._offer_prices(raw)]
+        if prices:
+            return (f"Variation not named (Source {best} has variations from £{min(prices):,.2f} "
+                    f"to £{max(prices):,.2f})")
+        return "Variation not named"
     if status == "MASKURA_GONE":
         return "Maskura page gone"
     if status == "MASKURA_UNREADABLE":
@@ -211,13 +224,13 @@ def build_simple(ws, rows):
             ("Reason", 60, "Why the product needs action, or It's okay. The Details tab has prices and margins.")]
     style_header(ws, cols, {})
     base = Font(name=FONT, size=10)
-    for r, (p, s, m, status, best, notes, mp, how) in enumerate(rows, 2):
+    for r, (p, s, m, status, best, notes, mp, how, sp) in enumerate(rows, 2):
         by_slot = {slot: url for slot, url, _, _ in s}
         put(ws, r, 1, p["name"] or "(no name in the sheet)", link=p["maskura_url"] or None)
         for slot, col in ((1, 2), (2, 3)):
             url = by_slot.get(slot) or ""
             put(ws, r, col, short_link(url), link=url or None)
-        put(ws, r, 4, reason_text(status, s, mp, best))
+        put(ws, r, 4, reason_text(status, s, mp, best, sp))
         for col in range(1, 5):
             cell = ws.cell(row=r, column=col)
             if not cell.hyperlink:
@@ -238,8 +251,8 @@ def build(db, out):
     rows = []
     for p in products:
         s = srcs.get(p["id"], [])
-        m, status, best, notes, mp, how = decide(p, s)
-        rows.append((p, s, m, status, best, notes, mp, how))
+        m, status, best, notes, mp, how, sp = decide(p, s)
+        rows.append((p, s, m, status, best, notes, mp, how, sp))
     order = {k: i for i, (k, *_) in enumerate(STATUSES)}
     rows.sort(key=lambda r: (0 if r[0]["has_problem"] else 1, order.get(r[3], 99), r[0]["position"] or 0))
 
@@ -258,7 +271,7 @@ def build(db, out):
     style_header(ws, PRODUCT_COLUMNS, {i: GOLD for i in supervisor_cols})
     base = Font(name=FONT, size=10)
     gbp = '£#,##0.00;[Red]-£#,##0.00;"-"'
-    for r, (p, s, m, status, best, notes, mp, how) in enumerate(rows, 2):
+    for r, (p, s, m, status, best, notes, mp, how, sp) in enumerate(rows, 2):
         by_slot = {slot: (url, raw) for slot, url, raw, _ in s}
         words, todo, _, _ = STATUS.get(status, (status, "", "", ""))
         values = [p["position"], p["name"] or "", "Yes" if p["has_problem"] else "No", words, todo,
@@ -271,7 +284,10 @@ def build(db, out):
         put(ws, r, 9, mp, fmt=gbp)
         put(ws, r, 10, HOW.get(how, "") if how else "")
         put(ws, r, 11, f"Source {best}" if best else "")
-        put(ws, r, 12, f'=IF(K{r}="Source 1",Q{r},IF(K{r}="Source 2",T{r},""))', fmt=gbp)
+        if how == "variations":   # the variation price that decided it, not the page's default price
+            put(ws, r, 12, sp, fmt=gbp)
+        else:
+            put(ws, r, 12, f'=IF(K{r}="Source 1",Q{r},IF(K{r}="Source 2",T{r},""))', fmt=gbp)
         put(ws, r, 13, f'=IF(AND(ISNUMBER(I{r}),ISNUMBER(L{r})),I{r}-L{r},"")', fmt=gbp)
         put(ws, r, 14, f'=IF(AND(ISNUMBER(M{r}),N(I{r})>0),M{r}/I{r},"")', fmt='0.0%;[Red]-0.0%;"-"')
         for slot, col in ((1, 15), (2, 18)):
@@ -459,7 +475,10 @@ def build(db, out):
         ("Built", f"{uk_time(datetime.datetime.now(datetime.timezone.utc).isoformat())} (UK time)."),
         ("The rule", "A product is OK when at least one source can be bought and costs less than Maskura's price for "
                      "the same variant. The variant named in the Maskura link is used; otherwise the variant whose "
-                     "name matches the source; otherwise the cheapest Maskura variant. An equal price is not OK."),
+                     "name matches the source; otherwise the cheapest Maskura variant. When a source sells variations at "
+                     "different prices and its link names none, each Maskura variant is compared with the variations "
+                     "its name matches, and the product is OK only if even the dearest of them is cheaper. An equal "
+                     "price is not OK."),
     ]
     for k, w, todo, *_ in STATUSES:
         meaning = {
@@ -467,6 +486,8 @@ def build(db, out):
             "COULD_NOT_CHECK": "Every source page failed to load (often an Amazon bot page), so nothing is known.",
             "MASKURA_GONE": "The Maskura link returns page not found, even after following any redirect.",
             "SOURCE_DEARER": "A source can be bought, but it costs the same as Maskura or more.",
+            "VARIANT_UNCLEAR": "The source sells variations at different prices and its link does not name one, "
+                               "so whether it is cheaper depends on which variation is bought.",
             "MASKURA_UNREADABLE": "The Maskura page could not be read this time.",
             "OK": "A buyable source costs less than Maskura's price.",
             "NO_MASKURA_LINK": "The sheet row has no Maskura link, so the product cannot be checked.",
