@@ -1,0 +1,85 @@
+# How a check runs. Edit this file, then: bash docs/render.sh
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    pad: 30
+  }
+}
+
+direction: down
+
+classes: {
+  step: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#2d8b8b"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 18
+      font-color: "#1a2332"
+    }
+  }
+  data: {
+    shape: cylinder
+    style: {
+      fill: "#f1faee"
+      stroke: "#6b7a8f"
+      stroke-width: 2
+      font-size: 18
+      font-color: "#1a2332"
+    }
+  }
+  site: {
+    style: {
+      fill: "#a8dadc"
+      stroke: "#2d8b8b"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 17
+      font-color: "#1a2332"
+    }
+  }
+  out: {
+    style: {
+      fill: "#1a2332"
+      stroke: "#1a2332"
+      border-radius: 10
+      font-size: 18
+      font-color: "#f1faee"
+    }
+  }
+}
+
+title: "How a check runs" {
+  shape: text
+  near: top-center
+  style: {
+    font-size: 28
+    bold: true
+    font-color: "#1a2332"
+  }
+}
+
+sheet: "1. Sourcing sheet (.csv or .xlsx)\nProduct Name | Maskura Link | Source 1 | Source 2" {class: step}
+read: "2. Read the sheet  (sheet.py)\nfinds the columns, cleans the links" {class: step}
+db: "3. Save products  (sc_store.py)\nchecks.db" {class: data}
+queue: "4. Queue one item per link  (sc_worker.py)\nshop page + every source link" {class: step}
+
+fetch: "5. Visit the pages, one site at a time per thread" {
+  style: {
+    fill: "#f1faee"
+    stroke: "#2d8b8b"
+    font-size: 18
+  }
+  grid-columns: 3
+  shop: "Shop page\nour price, variants" {class: site}
+  ebay: "eBay\nprice, stock,\nvariations" {class: site}
+  other: "Amazon and\nother sites\nprice, stock" {class: site}
+}
+
+decide: "6. Decide each product  (sc_crawl.py)\nsame variant, compare prices, check stock" {class: step}
+book: "7. Review workbook  (sc_review_book.py)\nreview.xlsx" {class: out}
+team: "8. Team fixes flagged products\nin the shop admin or the sheet" {class: step}
+
+sheet -> read -> db -> queue -> fetch -> decide -> book -> team

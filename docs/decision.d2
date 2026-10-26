@@ -1,0 +1,90 @@
+# How each product is decided (sc_crawl.decide_product). Edit this file, then: bash docs/render.sh
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    pad: 30
+  }
+}
+
+direction: down
+
+classes: {
+  q: {
+    shape: diamond
+    style: {
+      fill: "#ffffff"
+      stroke: "#1a2332"
+      stroke-width: 2
+      font-size: 17
+      font-color: "#1a2332"
+    }
+  }
+  ok: {
+    style: {
+      fill: "#d8f0e0"
+      stroke: "#2e8b57"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 17
+      font-color: "#1f6b40"
+    }
+  }
+  warn: {
+    style: {
+      fill: "#fdf0d5"
+      stroke: "#c98a1a"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 17
+      font-color: "#8a5a00"
+    }
+  }
+  bad: {
+    style: {
+      fill: "#fbe1e1"
+      stroke: "#c0392b"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 17
+      font-color: "#962d22"
+    }
+  }
+  step: {
+    style: {
+      fill: "#ffffff"
+      stroke: "#2d8b8b"
+      stroke-width: 2
+      border-radius: 10
+      font-size: 17
+      font-color: "#1a2332"
+    }
+  }
+}
+
+title: "How each product is decided" {
+  shape: text
+  near: top-center
+  style: {
+    font-size: 28
+    bold: true
+    font-color: "#1a2332"
+  }
+}
+
+shop: "Shop page read?" {class: q}
+gone: "Maskura page gone\n(or not read)" {class: bad}
+buy: "Any source buyable?\nlive, in stock, has a price" {class: q}
+nobuy: "No buyable source\n(Could not check, if no\nsource page loaded)" {class: bad}
+variant: "Pick the shop variant to compare\n1. variant in the shop link\n2. variant whose name matches\n3. cheapest shop variant" {class: step}
+cheaper: "Our price higher than\nthe best source price?" {class: q}
+ok: "OK\nnothing to do" {class: ok}
+dearer: "Source costs the\nsame or more" {class: warn}
+
+shop -> gone: "No"
+shop -> buy: "Yes"
+buy -> nobuy: "No"
+buy -> variant: "Yes"
+variant -> cheaper
+cheaper -> ok: "Yes"
+cheaper -> dearer: "No"
