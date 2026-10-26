@@ -52,14 +52,14 @@ from urllib.parse import urlsplit
 import httpcore
 import httpx
 
-import outcomes
-import title_quality as tq
-from sc_urls import (AMAZON_ASIN_RE, EBAY_ITEM_RE, MASKURA_BASE, MASKURA_HOSTS, detect_platform, host_of,
+from . import outcomes
+from . import title_quality as tq
+from .sc_urls import (AMAZON_ASIN_RE, EBAY_ITEM_RE, MASKURA_BASE, MASKURA_HOSTS, detect_platform, host_of,
                      maskura_url, normalize_maskura_url)
-from sources import amazon as _amazon
-from sources import ebay as _ebay
-from sources import generic as _generic
-from sources import maskura as _maskura
+from .sources import amazon as _amazon
+from .sources import ebay as _ebay
+from .sources import generic as _generic
+from .sources import maskura as _maskura
 
 HEADERS = {
     "User-Agent": (
@@ -1418,7 +1418,7 @@ def decide_product(maskura, sources):
 
     status: OK, SOURCE_DEARER, NO_BUYABLE_SOURCE, MASKURA_GONE, MASKURA_UNREADABLE, NO_MASKURA_LINK,
     NO_SOURCE_LINK or CHECKING."""
-    import sc_variants
+    from . import sc_variants
     notes = []
     sources = list(sources or [])
     # Empty slots are stored with no verdict: skip them before looking for unfinished ones.

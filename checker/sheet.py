@@ -12,7 +12,7 @@ import os
 import re
 from urllib.parse import urlsplit
 
-import sc_urls
+from . import sc_urls
 
 try:
     import openpyxl as _openpyxl

@@ -8,7 +8,7 @@ import os
 import tempfile
 import unittest
 
-import sc_store
+from checker import sc_store
 from test_sc_store import FAKE_URLS, FakeClock, base_rows, fake_finalize
 
 MK = "www.maskura.co.uk"

@@ -556,13 +556,13 @@ class Store:
     def finalizer(self):
         """finalize_product(maskura, sources) -> finalized; sc_crawl's by default (imported on first use)."""
         if self._finalizer is None:
-            self._finalizer = importlib.import_module("sc_crawl").finalize_product
+            self._finalizer = importlib.import_module(".sc_crawl", __package__).finalize_product
         return self._finalizer
 
     @property
     def urls(self):
         if self._urls is None:
-            self._urls = importlib.import_module("sc_urls")
+            self._urls = importlib.import_module(".sc_urls", __package__)
         return self._urls
 
     def now_dt(self):
@@ -2231,7 +2231,7 @@ class Store:
                           "ORDER BY priority DESC, id DESC LIMIT 1").fetchone()
             if j is None:
                 return {"job": None}
-            labels = importlib.import_module("sc_labels")
+            labels = importlib.import_module(".sc_labels", __package__)
             now = self.now_dt()
             params = _loads(j["params_json"], {})
             started = parse_iso(j["started_at"]) if j["started_at"] else None

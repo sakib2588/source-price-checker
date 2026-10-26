@@ -4,7 +4,7 @@ Run: .venv/bin/python -B -m unittest test_sc_urls
 """
 import unittest
 
-import sc_urls as u
+from checker import sc_urls as u
 
 BASE = "https://www.maskura.co.uk/products/"
 

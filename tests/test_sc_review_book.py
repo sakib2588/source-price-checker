@@ -5,7 +5,7 @@ import unittest
 
 import openpyxl
 
-import sc_review_book
+from checker import sc_review_book
 from test_sc_reuse import ReuseCase
 
 

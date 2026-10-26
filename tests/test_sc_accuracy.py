@@ -10,7 +10,7 @@ import pathlib
 import unittest
 
 _spec = importlib.util.spec_from_file_location(
-    "rescore_report", pathlib.Path(__file__).parent / "scripts" / "rescore_report.py")
+    "rescore_report", pathlib.Path(__file__).parent.parent / "scripts" / "rescore_report.py")
 rr = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(rr)
 
@@ -40,7 +40,7 @@ class Bucket(unittest.TestCase):
         self.assertEqual(rr.bucket(M, [src(price_gbp=20.0)]), "SOURCE_DEARER")
 
 
-import sc_crawl  # noqa: E402
+from checker import sc_crawl  # noqa: E402
 from test_sc_crawl import RecordingPacer, html, jsonr, mock_client, routes  # noqa: E402
 
 OLD = "https://www.maskura.co.uk/products/best-steam-inhaler-uk"
@@ -144,8 +144,8 @@ class Ebay404(unittest.TestCase):
         self.assertIs(sd["available"], False, "an eBay 404 page is never a buyable source")
 
 
-from sources import ebay as ebay_src  # noqa: E402
-import sc_variants  # noqa: E402
+from checker.sources import ebay as ebay_src  # noqa: E402
+from checker import sc_variants  # noqa: E402
 
 VAR_ITEM = "https://www.ebay.co.uk/itm/253805285784"
 
@@ -331,7 +331,7 @@ class Decide(unittest.TestCase):
 
 class StoreUsesTheStatus(unittest.TestCase):
     def test_has_problem_follows_the_status(self):
-        import sc_store
+        from checker import sc_store
         self.assertTrue(sc_store.problem_from(
             {"status": "NO_BUYABLE_SOURCE", "flags": []}, maskura_status="OK"))
         self.assertFalse(sc_store.problem_from({"status": "OK", "flags": []}, maskura_status="OK"))
@@ -339,7 +339,7 @@ class StoreUsesTheStatus(unittest.TestCase):
         self.assertTrue(sc_store.problem_from({"status": "MASKURA_GONE", "flags": []}, maskura_status="LINK_BROKEN"))
 
     def test_results_finalized_before_the_change_keep_the_old_rule(self):
-        import sc_store
+        from checker import sc_store
         self.assertTrue(sc_store.problem_from({"flags": ["S1_VARIANT"]}, maskura_status="OK"))
         self.assertTrue(sc_store.problem_from({"flags": []}, maskura_status="LINK_BROKEN"))
         self.assertFalse(sc_store.problem_from({"flags": ["S1_PENDING"]}, maskura_status="OK"))
