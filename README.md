@@ -77,12 +77,12 @@ Step by step, with the file that does each part:
 | Step | What happens | File |
 |---|---|---|
 | 1 | You give it the sourcing sheet | your `.csv` or `.xlsx` |
-| 2 | It finds the columns and cleans each link (`N/A` becomes "no link", a missing `https://` is added) | `sheet.py` |
-| 3 | Each row is saved as a product in a small database file, `checks.db` | `sc_store.py` |
-| 4 | One task is queued for each link: the shop page plus every source link | `sc_worker.py` |
-| 5 | Six threads visit the pages: one for the shop, one for eBay, four for other sites. Each site is visited slowly, one request at a time | `sc_worker.py`, `sc_crawl.py`, `sources/` |
-| 6 | Each product gets one decision (next section) | `sc_crawl.py`, `sc_variants.py` |
-| 7 | The Excel review workbook is written | `sc_review_book.py` |
+| 2 | It finds the columns and cleans each link (`N/A` becomes "no link", a missing `https://` is added) | `checker/sheet.py` |
+| 3 | Each row is saved as a product in a small database file, `checks.db` | `checker/sc_store.py` |
+| 4 | One task is queued for each link: the shop page plus every source link | `checker/sc_worker.py` |
+| 5 | Six threads visit the pages: one for the shop, one for eBay, four for other sites. Each site is visited slowly, one request at a time | `checker/sc_worker.py`, `checker/sc_crawl.py`, `checker/sources/` |
+| 6 | Each product gets one decision (next section) | `checker/sc_crawl.py`, `checker/sc_variants.py` |
+| 7 | The Excel review workbook is written | `checker/sc_review_book.py` |
 | 8 | A person fixes the flagged products in the shop admin or the sheet | you |
 
 What is read from each page:
@@ -203,19 +203,26 @@ supplier link probably points at a different size or pack. Add `?var=` to the li
 ## For developers
 
 ```bash
-.venv/bin/python -m unittest discover -p 'test_*.py'    # 323 tests, no network
+.venv/bin/python -m unittest discover -s tests          # 323 tests, no network
 ```
 
-| File | Role |
-|---|---|
-| `cli.py` | Command line: `check` (sheet in, workbook out) and `review` |
-| `sheet.py` | Reads the sourcing sheet |
-| `sc_crawl.py` | Fetches pages, paces requests per site, decides each product |
-| `sources/` | Page readers: `ebay.py`, `amazon.py`, `maskura.py`, `generic.py` |
-| `sc_variants.py` | Which shop variant price a source is compared with |
-| `sc_store.py` | SQLite store: products, results, check jobs |
-| `sc_worker.py` | Runs a check job in parallel threads, with retries |
-| `sc_review_book.py` | Builds the Excel review workbook |
-| `sc_labels.py`, `outcomes.py`, `title_quality.py`, `sc_urls.py` | Wording, outcome rules, title checks, URL handling |
-| `fixtures/` | Trimmed eBay item pages used by the eBay reader's tests |
-| `docs/` | The two diagrams (`.d2` sources; rebuild with `bash docs/render.sh`, needs [D2](https://d2lang.com)) |
+```
+source-price-checker/
+├── cli.py                  command line: check (sheet in, workbook out) and review
+├── checker/                the engine (a Python package)
+│   ├── sheet.py            reads the sourcing sheet
+│   ├── sc_crawl.py         fetches pages, paces requests per site, decides each product
+│   ├── sc_variants.py      which shop variant price a source is compared with
+│   ├── sc_store.py         SQLite store: products, results, check jobs
+│   ├── sc_worker.py        runs a check job in parallel threads, with retries
+│   ├── sc_review_book.py   builds the Excel review workbook
+│   ├── sc_labels.py        plain-English wording for every result
+│   ├── outcomes.py         what counts as blocked, removed, or out of stock
+│   ├── title_quality.py    title and price sanity checks
+│   ├── sc_urls.py          link cleaning and site detection
+│   └── sources/            page readers: ebay.py, amazon.py, maskura.py, generic.py
+├── tests/                  323 tests, no network
+│   └── fixtures/           trimmed eBay item pages for the eBay reader's tests
+├── scripts/                helper scripts (re-score a results file, old-format migration, test helper)
+└── docs/                   the two README diagrams (.d2 sources; rebuild with bash docs/render.sh)
+```

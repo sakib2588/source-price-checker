@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 
-import title_quality as tq
+from . import title_quality as tq
 
 SEVERITY_ORDER = ("bad", "warn", "neutral", "ok")
 _RANK = {s: i for i, s in enumerate(SEVERITY_ORDER)}

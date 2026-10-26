@@ -7,6 +7,7 @@ Run: .venv/bin/python -B -m unittest test_sc_crawl
 """
 import gzip
 import json
+import os
 import re
 import socket
 import time
@@ -15,7 +16,7 @@ from unittest import mock
 
 import httpx
 
-import sc_crawl as c
+from checker import sc_crawl as c
 
 PUBLIC = "93.184.216.34"
 PAD = "<!-- " + "x" * 6000 + " -->"
@@ -910,9 +911,10 @@ class Finalize(unittest.TestCase):
 
 class NoBannedGlyphs(unittest.TestCase):
     def test_new_modules(self):
-        for name in ("sc_crawl.py", "sc_urls.py", "sc_labels.py", "test_sc_crawl.py", "test_sc_urls.py",
-                     "test_sc_labels.py"):
-            with open(name, encoding="utf-8") as f:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for name in ("checker/sc_crawl.py", "checker/sc_urls.py", "checker/sc_labels.py", "tests/test_sc_crawl.py",
+                     "tests/test_sc_urls.py", "tests/test_sc_labels.py"):
+            with open(os.path.join(root, name), encoding="utf-8") as f:
                 text = f.read()
             for glyph in (chr(cp) for cp in (0xA7, 0xB6, 0x2020, 0x2021)):
                 self.assertNotIn(glyph, text, name)

@@ -8,7 +8,7 @@ import unittest
 import openpyxl
 
 import cli
-import sheet
+from checker import sheet
 
 
 def write(path, text):

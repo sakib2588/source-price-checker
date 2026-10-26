@@ -22,9 +22,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
-import sc_crawl
-import sc_store
-import sc_variants
+from . import sc_crawl
+from . import sc_store
+from . import sc_variants
 
 LONDON = ZoneInfo("Europe/London")
 FONT = "Arial"

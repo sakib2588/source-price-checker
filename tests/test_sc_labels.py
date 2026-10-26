@@ -6,8 +6,8 @@ import os
 import re
 import unittest
 
-import sc_crawl
-import sc_labels as L
+from checker import sc_crawl
+from checker import sc_labels as L
 
 SEVERITIES = {"bad", "warn", "ok", "neutral"}
 GLYPHS = tuple(chr(cp) for cp in (0xA7, 0xB6, 0x2020, 0x2021))   # banned glyphs, by codepoint
@@ -83,7 +83,7 @@ class PageWords(unittest.TestCase):
 
     def test_every_store_event_kind_has_a_phrase(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(here, "sc_store.py"), encoding="utf-8") as fh:
+        with open(os.path.join(here, "..", "checker", "sc_store.py"), encoding="utf-8") as fh:
             src = fh.read()
         kinds = set(re.findall(r'_event\(c, [a-z_\[\]"]+, "([a-z_]+)"', src))
         kinds |= set(re.findall(r'_apply_(?:review|link)_change\(c, p, "([a-z_]+)"', src))

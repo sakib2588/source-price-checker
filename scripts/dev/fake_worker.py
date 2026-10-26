@@ -13,9 +13,9 @@ sys.path.insert(0, HERE)
 
 import httpx  # noqa: E402
 
-import sc_crawl  # noqa: E402
-import sc_store  # noqa: E402
-import sc_worker  # noqa: E402
+from checker import sc_crawl  # noqa: E402
+from checker import sc_store  # noqa: E402
+from checker import sc_worker  # noqa: E402
 
 
 class FastPacer(sc_crawl.Pacer):

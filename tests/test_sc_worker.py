@@ -10,9 +10,9 @@ import unittest
 
 import httpx
 
-import sc_crawl
-import sc_store
-import sc_worker
+from checker import sc_crawl
+from checker import sc_store
+from checker import sc_worker
 from test_sc_store import FAKE_URLS
 
 MK = "www.maskura.co.uk"
@@ -288,7 +288,7 @@ class KillNine(unittest.TestCase):
         import sqlite3
         import subprocess
         import sys
-        here = os.path.dirname(os.path.abspath(__file__))
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root
         with tempfile.TemporaryDirectory() as tmp:
             db = os.path.join(tmp, "sc.db")
             store = sc_store.Store(db)
@@ -413,7 +413,7 @@ class InhibitorLife(unittest.TestCase):
         import signal
         import subprocess
         import sys
-        here = os.path.dirname(os.path.abspath(__file__))
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the repo root
         with tempfile.TemporaryDirectory() as tmp:
             fake = os.path.join(tmp, "systemd-inhibit")
             with open(fake, "w", encoding="utf-8") as fh:
@@ -421,7 +421,7 @@ class InhibitorLife(unittest.TestCase):
                          'while [ "${1#--}" != "$1" ]; do shift; done\nexec "$@"\n')
             os.chmod(fake, 0o755)
             env = dict(os.environ, PATH=tmp + os.pathsep + os.environ.get("PATH", ""))
-            code = ("import sys, time; sys.path.insert(0, %r); import sc_worker; i = sc_worker.Inhibitor(enabled=True); "
+            code = ("import sys, time; sys.path.insert(0, %r); from checker import sc_worker; i = sc_worker.Inhibitor(enabled=True); "
                     "assert i.enabled; i.hold(True); print(i._proc.pid, flush=True); time.sleep(60)" % here)
             child = subprocess.Popen([sys.executable, "-B", "-c", code], env=env, stdout=subprocess.PIPE, text=True)
             inhibitor_pid = int(child.stdout.readline())

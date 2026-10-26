@@ -29,8 +29,8 @@ import time
 
 import httpx
 
-import sc_crawl
-import sc_store
+from . import sc_crawl
+from . import sc_store
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 log = logging.getLogger("sc_worker")

@@ -7,7 +7,7 @@ Run: python3 -B -m unittest test_title_quality
 """
 import unittest
 
-import title_quality as tq
+from checker import title_quality as tq
 
 
 class PlaceholderTitles(unittest.TestCase):

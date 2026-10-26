@@ -64,8 +64,8 @@ def refinalize_copy(db_path):
     if os.path.realpath(db_path) == os.path.realpath(LIVE_DB):
         raise SystemExit("refusing to write the live database; copy it first")
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import sc_crawl
-    import sc_store
+    from checker import sc_crawl
+    from checker import sc_store
     st = sc_store.Store(db_path)
     c = sqlite3.connect(db_path)
     c.row_factory = sqlite3.Row

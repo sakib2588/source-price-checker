@@ -33,7 +33,7 @@ PORTAL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PORTAL_DIR not in sys.path:
     sys.path.insert(0, PORTAL_DIR)
 
-import sc_store  # noqa: E402
+from checker import sc_store  # noqa: E402
 
 ACTOR = "system (migration)"
 MASKURA_NOT_CRAWLED = "not crawled"
@@ -194,7 +194,7 @@ def main(argv=None, *, finalize_fn=None, urls=None, out=None):
                           "expected": args.expect_count}), file=out)
         return 2
     if finalize_fn is None:
-        finalize_fn = importlib.import_module("sc_crawl").finalize_product
+        finalize_fn = importlib.import_module("checker.sc_crawl").finalize_product
 
     scratch = None
     try:

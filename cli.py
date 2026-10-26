@@ -14,10 +14,10 @@ import os
 import sys
 import time
 
-import sc_review_book
-import sc_store
-import sc_worker
-import sheet
+from checker import sc_review_book
+from checker import sc_store
+from checker import sc_worker
+from checker import sheet
 
 ACTOR = "cli"
 FINISHED = ("done", "failed", "stopped", "paused")

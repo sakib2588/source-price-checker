@@ -10,7 +10,7 @@ import time
 import unittest
 from urllib.parse import parse_qs, urlsplit
 
-import sc_store
+from checker import sc_store
 
 ISO_RE = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 
@@ -987,7 +987,7 @@ class TestRulesDecided20261016(StoreCase):
     def test_no_url_slot_is_never_pending(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location(
-            "migrate_json_to_db", os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts",
+            "migrate_json_to_db", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts",
                                                "migrate_json_to_db.py"))
         mig = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mig)
