@@ -1,0 +1,17 @@
+# Results and outputs: these hold real product data and prices
+*.db
+*.db-shm
+*.db-wal
+*.xlsx
+*.csv
+!fixtures/*.csv
+
+# Secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+worker.lock
