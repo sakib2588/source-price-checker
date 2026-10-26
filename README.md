@@ -203,7 +203,7 @@ supplier link probably points at a different size or pack. Add `?var=` to the li
 ## For developers
 
 ```bash
-.venv/bin/python -m unittest discover -s tests          # 323 tests, no network
+.venv/bin/python -m unittest discover -s tests          # 348 tests, no network
 ```
 
 ```

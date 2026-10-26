@@ -1416,8 +1416,8 @@ def _buyable(sd):
 def decide_product(maskura, sources):
     """(status, best source slot or None, notes) for one product. Pure.
 
-    status: OK, SOURCE_DEARER, NO_BUYABLE_SOURCE, MASKURA_GONE, MASKURA_UNREADABLE, NO_MASKURA_LINK,
-    NO_SOURCE_LINK or CHECKING."""
+    status: OK, SOURCE_DEARER, VARIANT_UNCLEAR, NO_BUYABLE_SOURCE, MASKURA_GONE, MASKURA_UNREADABLE,
+    NO_MASKURA_LINK, NO_SOURCE_LINK or CHECKING."""
     from . import sc_variants
     notes = []
     sources = list(sources or [])
@@ -1439,19 +1439,29 @@ def decide_product(maskura, sources):
     if not linked:
         return "NO_SOURCE_LINK", None, notes
     best = None
+    unclear = []   # sources whose variations straddle Maskura's price (sc_variants.variation_range)
     for i, s in linked:
         if not _buyable(s):
             continue
-        mp, how = sc_variants.compare_price(maskura, s)
-        if mp is None:
-            continue
-        if how == "cheapest":
-            notes.append(f"Source {i}: variant not named, compared with the cheapest Maskura variant")
         if s.get("offers") and not s.get("variation_label"):
             notes.append(f"Source {i} has variations; the link does not name one")
-        margin = round(mp - float(s["price_gbp"]), 2)
+        vr = sc_variants.variation_range(maskura, s)
+        if vr is not None:
+            if vr["result"] == "unclear":
+                unclear.append(i)
+                continue
+            margin = vr["margin"]
+        else:
+            mp, how = sc_variants.compare_price(maskura, s)
+            if mp is None:
+                continue
+            if how == "cheapest":
+                notes.append(f"Source {i}: variant not named, compared with the cheapest Maskura variant")
+            margin = round(mp - float(s["price_gbp"]), 2)
         if best is None or margin > best[1]:
             best = (i, margin)
+    if (best is None or best[1] <= 0) and unclear:
+        return "VARIANT_UNCLEAR", unclear[0], notes
     if best is None:
         return "NO_BUYABLE_SOURCE", None, notes
     if best[1] <= 0:
@@ -1466,6 +1476,8 @@ def _flags_for(status, best, flags):
         return flags
     if status == "SOURCE_DEARER":
         return [f"S{best}_INVERTED"] + [f for f in flags if f == f"S{best}_PRICE_SUSPECT"]
+    if status == "VARIANT_UNCLEAR":
+        return [f"S{best}_VARIANT_UNCLEAR"]
     if status == "NO_BUYABLE_SOURCE":
         return [f for f in flags if f.startswith("S") and f.split("_", 1)[1] in _NEEDS_SOURCE_SUFFIXES]
     if status == "MASKURA_UNREADABLE":

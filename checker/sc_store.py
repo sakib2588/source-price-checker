@@ -134,7 +134,7 @@ def is_transient_flag(code):
 
 
 # The decision statuses that are problems (sc_crawl.decide_product, owner's rule 2026-10-23).
-PROBLEM_STATUSES = ("SOURCE_DEARER", "NO_BUYABLE_SOURCE", "MASKURA_GONE", "MASKURA_UNREADABLE")
+PROBLEM_STATUSES = ("SOURCE_DEARER", "VARIANT_UNCLEAR", "NO_BUYABLE_SOURCE", "MASKURA_GONE", "MASKURA_UNREADABLE")
 
 
 def problem_from(finalized, maskura_status):

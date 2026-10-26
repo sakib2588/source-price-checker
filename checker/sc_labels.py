@@ -32,6 +32,9 @@ _PROBLEMS = {
                                  "Maskura title names."},
     "VARIATION":     {"word": "Variation not checked", "severity": "warn",
                       "meaning": "The link names one variation, and the price shown may belong to another."},
+    "VARIANT_UNCLEAR": {"word": "Variation not named", "severity": "warn",
+                        "meaning": "The supplier sells variations at different prices and the link does not "
+                                   "say which one, so the margin depends on which variation is bought."},
     "PRICE_SUSPECT": {"word": "Price looks wrong", "severity": "warn",
                       "meaning": "The two prices are so far apart that one of them was probably misread."},
     "CURRENCY":      {"word": "Not in pounds", "severity": "warn",
@@ -189,6 +192,8 @@ NO_CHANGE_REASONS = {
                 "Supplier sells the variant under another listing"),
     "VARIATION": ("Checked: the variation price is right", "Only one variation is sold",
                   "Price is the same for every variation"),
+    "VARIANT_UNCLEAR": ("Checked: the variation we buy is cheaper", "Variation added to the source link",
+                        "We buy a different variation now"),
     "PRICE_SUSPECT": ("Checked: both prices are right", "Bundle or pack priced differently",
                       "Supplier price is per unit"),
     "CURRENCY": ("Checked the price by hand", "Supplier invoices in pounds", "Not a supplier we use"),
