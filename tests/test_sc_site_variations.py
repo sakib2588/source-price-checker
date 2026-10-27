@@ -160,8 +160,56 @@ class AgainstMaskura(unittest.TestCase):
         src = self.source("https://shop.co.uk/p", WOO)
         maskura = {"price_gbp": 60.0, "variants": [{"id": 1, "title": "2 x 4kg", "price_gbp": 59.99},
                                                    {"id": 2, "title": "4kg", "price_gbp": 39.99}]}
-        res = sc_variants.variation_range(maskura, src)
+        # Maskura "4kg" matches the supplier's "4kg", which is out of stock: a person decides.
+        self.assertEqual(sc_variants.variation_range(maskura, src)["result"], "unclear")
+        only_pack = {"price_gbp": 60.0, "variants": [maskura["variants"][0]]}
+        res = sc_variants.variation_range(only_pack, src)
         self.assertEqual((res["result"], res["margin"]), ("ok", 10.0))
+
+
+class SizesAndStock(unittest.TestCase):
+    W = staticmethod(sc_variants._words)
+
+    def test_one_size_many_spellings(self):
+        same = ["King (165*137 CM)", "King - 137x165cm", "king 137 cm x 165 cm", "KING 165 x 137cm", "King 137\u00d7165 cm"]
+        self.assertEqual(len({frozenset(self.W(t)) for t in same}), 1)
+        self.assertIn("dim137x165", self.W(same[0]))
+
+    def test_a_pack_is_not_a_size(self):
+        self.assertEqual(self.W("2 x 4kg"), {"2", "x", "4kg"})
+        self.assertNotIn("dim2x4", self.W("2 x 4 kg"))
+
+    def test_different_sizes_stay_different(self):
+        self.assertNotEqual(self.W("160 x 120 cm"), self.W("165*137 CM"))
+        self.assertEqual(self.W("160 x 120 cm"), self.W("120*160"))
+
+    def test_electric_blanket_king_pairs_with_king(self):
+        maskura = {"price_gbp": 44.49, "variants": [{"id": 1, "title": "King (165*137 CM)", "price_gbp": 47.79}]}
+        source = {"offers": [{"id": "1", "label": "Single - 65x135cm", "price_gbp": 24.99, "available": False},
+                             {"id": "2", "label": "King - 137x165cm", "price_gbp": 32.99, "available": True},
+                             {"id": "3", "label": "Double - 120x135cm", "price_gbp": 29.99, "available": True}]}
+        res = sc_variants.variation_range(maskura, source)
+        self.assertEqual((res["result"], res["margin"], res["source_price"]), ("ok", 14.8, 32.99))
+
+    def test_out_of_stock_variations_are_not_price_candidates(self):
+        maskura = {"price_gbp": 30.0, "variants": [{"id": 1, "title": "Red", "price_gbp": 30.0}]}
+        source = {"offers": [{"id": "1", "label": "Blue", "price_gbp": 10.0, "available": False},
+                             {"id": "2", "label": "Green", "price_gbp": 25.0, "available": True},
+                             {"id": "3", "label": "Black", "price_gbp": 28.0, "available": True}]}
+        res = sc_variants.variation_range(maskura, source)
+        self.assertEqual((res["result"], res["margin"], res["source_price"]), ("ok", 2.0, 28.0))
+
+    def test_name_match_that_is_out_of_stock_needs_a_person(self):
+        maskura = {"price_gbp": 30.0, "variants": [{"id": 1, "title": "Single", "price_gbp": 30.0}]}
+        source = {"offers": [{"id": "1", "label": "Single - 65x135cm", "price_gbp": 24.99, "available": False},
+                             {"id": "2", "label": "King - 137x165cm", "price_gbp": 12.0, "available": True}]}
+        self.assertEqual(sc_variants.variation_range(maskura, source)["result"], "unclear")
+
+    def test_unknown_stock_still_counts(self):
+        maskura = {"price_gbp": 30.0, "variants": [{"id": 1, "title": "Red", "price_gbp": 30.0}]}
+        source = {"offers": [{"id": "1", "label": "Blue", "price_gbp": 10.0, "available": None},
+                             {"id": "2", "label": "Green", "price_gbp": 25.0, "available": None}]}
+        self.assertEqual(sc_variants.variation_range(maskura, source)["source_price"], 25.0)
 
 
 if __name__ == "__main__":

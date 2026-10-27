@@ -15,8 +15,24 @@ _IGNORE = {"", "default", "title"}
 _UNIT = re.compile(r"(\d)\s+(kg|g|mg|ml|l|cm|mm|m|oz|lb|lbs|pcs|pc|in|inch|ft)\b")
 
 
+# "165*137", "137x165cm", "137 cm x 165 cm" and "165 x 137" are one size: the numbers are sorted into one
+# token. A bare "2 x 4kg" is a pack, not a size, so a plain "x" counts only when a length unit is given.
+_LEN = r"(?:cm|mm|m|in|inch|ft)"
+_DIM = re.compile(rf"(\d+(?:\.\d+)?)\s*({_LEN})?\s*([x*\u00d7])\s*(\d+(?:\.\d+)?)\s*({_LEN})?"
+                  rf"(?:\s*[x*\u00d7]\s*(\d+(?:\.\d+)?)\s*({_LEN})?)?(?![a-z0-9])")
+
+
+def _size(m):
+    units = [m.group(2), m.group(5), m.group(7)]
+    if m.group(3) == "x" and not any(units):
+        return m.group(0)
+    nums = sorted(float(n) for n in (m.group(1), m.group(4), m.group(6)) if n)
+    return " dim" + "x".join(f"{n:g}" for n in nums) + " "
+
+
 def _words(text):
-    text = _UNIT.sub(r"\1\2", str(text or "").lower())
+    text = _DIM.sub(_size, str(text or "").lower())
+    text = _UNIT.sub(r"\1\2", text)
     return {w.strip(".") for w in _SPLIT.split(text)} - _IGNORE - {""}
 
 
@@ -48,7 +64,8 @@ def match_variant(maskura_variants, source_text):
     return min(vs, key=lambda v: float(v["price_gbp"])), "cheapest"
 
 
-def _offer_prices(source):
+def _offers_with_stock(source):
+    """[(label words, price, in_stock)] for every priced variation; in_stock is False only when the source says so."""
     out = []
     for o in (source or {}).get("offers") or []:
         try:
@@ -56,8 +73,12 @@ def _offer_prices(source):
         except (TypeError, ValueError):
             continue
         if price > 0:
-            out.append((_words(o.get("label")), price))
+            out.append((_words(o.get("label")), price, o.get("available") is not False))
     return out
+
+
+def _offer_prices(source):
+    return [(w, p) for w, p, _ in _offers_with_stock(source)]
 
 
 def variation_range(maskura, source):
@@ -70,9 +91,10 @@ def variation_range(maskura, source):
     when the rule does not apply: the link names a variation, or the listing has one price."""
     if (source or {}).get("variation_label"):
         return None
-    offers = _offer_prices(source)
-    if len({p for _, p in offers}) < 2:
+    offers = _offers_with_stock(source)
+    if len({p for _, p, _ in offers}) < 2:
         return None
+    stocked = [(w, p) for w, p, ok in offers if ok] or [(w, p) for w, p, _ in offers]
     vs = _priced((maskura or {}).get("variants"))
     want = (maskura or {}).get("variant_id")
     targets = [v for v in vs if want and str(v.get("id")) == str(want)] or vs
@@ -86,8 +108,17 @@ def variation_range(maskura, source):
     for v in targets:
         mp, name = float(v["price_gbp"]), _words(v.get("title"))
         # The closest names win, so "4 kg" matches "4KG" and not also "2 x 4KG".
-        named = [(len(w - name), p) for w, p in offers if name and name <= w]
-        cands = [p for extra, p in named if extra == min(e for e, _ in named)] or [p for _, p in offers]
+        # A variation that matches by name but is out of stock cannot fill this variant: a person decides.
+        matched = [(len(w - name), p, ok) for w, p, ok in offers if name and name <= w]
+        if matched:
+            closest = min(e for e, _, _ in matched)
+            near = [(p, ok) for e, p, ok in matched if e == closest]
+            if not any(ok for _, ok in near):
+                unclear = True
+                continue
+            cands = [p for p, ok in near if ok]
+        else:
+            cands = [p for _, p in stocked]
         low, high = mp - max(cands), mp - min(cands)
         if high <= 0:
             if losing is None or high < losing[0]:
