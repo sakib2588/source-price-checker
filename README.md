@@ -129,8 +129,20 @@ variant** on both sides.
 3. The variant whose name appears in the supplier's variation name or title (for example "Large / Red").
 4. Otherwise the **cheapest** of our variants.
 
-**Which supplier price is used:** if the eBay link names a variation (`?var=...`), that exact variation's
-price and stock. Otherwise the price the page shows first.
+**Which supplier price is used:** if the link names a variation, that exact variation's price and stock.
+Otherwise every variation is read and compared with the matching variant of ours. Each kind of site has its
+own reader, and all of them hand the same four fields (id, name, price, stock) to the comparison:
+
+| Source | How variations are read | Link that names one |
+|---|---|---|
+| eBay UK | eBay's official API (item group), falling back to the page | `?var=...` |
+| Shopify shops | the product data in the page | `?variant=...` |
+| WooCommerce shops | the variation list on the add-to-cart form | `?variation_id=...` or `?attribute_...=...` |
+| Other shops with schema.org data | `ProductGroup` variants, or a product with several priced offers | none, all are compared |
+| Amazon UK | the page only names the linked product's option (for example "Blue / Small"); it shows no sibling prices | the `/dp/ASIN` of that option |
+
+A site with none of these, such as one that builds its size menu with scripts, is read as one price and
+flagged as unverified when its link names a variation.
 
 **Worked example.** This eBay listing sells 5 weights from £35.99 to £112.99:
 
@@ -174,8 +186,11 @@ about 4 hours on a good day and about 11 hours when eBay refused often.
 links at first, then blocked all of them), and eBay refused between 3 and 15 percent of requests.
 
 **Their rules.** eBay's and Amazon's terms of use do not allow automated access without permission. The
-supported way to read eBay prices is eBay's official Browse API (free, 5,000 calls a day by default), which
-this tool does not use yet. Use the checker gently, and not from the same internet connection as the
+supported way to read eBay prices is eBay's official Browse API (free, 5,000 calls a day by default). Set
+`EBAY_APP_ID` and `EBAY_CERT_ID` (the production keyset's Client ID and Client Secret) and eBay UK links are read
+through it, about 5 a second, stopping at 4,500 a day; a link the API cannot answer (ended, removed, not in
+pounds) is read from the page as before. `EBAY_API_DISABLE=1` turns it off, and tests should set it so they
+never reach eBay. Use the scraper gently, and not from the same internet connection as the
 accounts the team buys with.
 
 ---

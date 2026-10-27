@@ -10,6 +10,7 @@ import json, re
 from typing import Optional
 from bs4 import BeautifulSoup
 from .base import SourceResult
+from .variations import amazon_label
 
 _PRICE_RE = re.compile(r"[\d,]+\.?\d*")
 
@@ -89,4 +90,6 @@ def extract(url: str, html: str) -> SourceResult:
         elif any(w in txt.lower() for w in ("out of stock", "unavailable", "currently")):
             result.available = False
 
+    # The linked ASIN's variation ("Red / Large"); Amazon puts no sibling prices on the page.
+    result.variation_label = amazon_label(url, html)
     return result

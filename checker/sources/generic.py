@@ -28,6 +28,7 @@ from typing import Iterable, Optional
 from urllib.parse import urlsplit
 
 from .base import SourceResult
+from . import variations
 
 # Pages bigger than this are cut before parsing; nothing useful sits past the first few MB.
 MAX_HTML_CHARS = 4_000_000
@@ -398,6 +399,19 @@ def extract(url: str, html_bytes, declared_charset: Optional[str] = None) -> Sou
     result.price_gbp = price_gbp
     result.available = available
     result.availability_text = "unknown" if available is None else ("In stock" if available else "Out of stock")
+
+    # Several variations (Shopify, WooCommerce, schema.org): keep them all, and price the one the link names.
+    offers = variations.read(url, text)
+    if offers:
+        result.offers = offers
+        hit = variations.pick_linked(url, offers)
+        if hit:
+            result.variation_label = hit["label"] or None
+            if hit["price_gbp"] is not None:
+                price_gbp = result.price_gbp = hit["price_gbp"]
+            if hit["available"] is not None:
+                available = result.available = hit["available"]
+                result.availability_text = "In stock" if available else "Out of stock"
 
     if price_gbp is None and available is None:
         result.error = "Generic extractor: " + (problem or "no price found on page")
