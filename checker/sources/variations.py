@@ -60,7 +60,12 @@ def _shopify_price(value):
     return _price(value)
 
 
-def _shopify_variants(text):
+def _handle(url):
+    m = re.search(r"/products/([^/?#]+)", urlsplit(str(url or "")).path)
+    return m.group(1).lower() if m else ""
+
+
+def _shopify_variants(text, url=""):
     for m in _PRODUCT_JSON_RE.finditer(text):
         try:
             data = json.loads(_html.unescape(m.group(1)))
@@ -69,6 +74,11 @@ def _shopify_variants(text):
         data = data.get("product", data) if isinstance(data, dict) else data
         if isinstance(data, dict) and isinstance(data.get("variants"), list):
             return data["variants"]
+    # A theme repeats `"variants":[` for recommended products too: take the list that belongs to the
+    # product in the link (it names the variation, or the product's handle sits just before the list).
+    handle = _handle(url)
+    want = (parse_qs(urlsplit(str(url or "")).query).get("variant") or [None])[0]
+    first = None
     i = text.find('"variants":[')
     while i >= 0:
         try:
@@ -76,14 +86,18 @@ def _shopify_variants(text):
         except ValueError:
             value = None
         if isinstance(value, list) and value and all(isinstance(v, dict) and "id" in v and "price" in v for v in value):
-            return value
+            if want and any(str(v["id"]) == want for v in value):
+                return value
+            if handle and f'"handle":"{handle}"' in text[max(0, i - 3000):i].lower():
+                return value
+            first = first or value
         i = text.find('"variants":[', i + 1)
-    return []
+    return [] if handle or want else (first or [])
 
 
-def shopify(text):
+def shopify(text, url=""):
     out = []
-    for v in _shopify_variants(text):
+    for v in _shopify_variants(text, url):
         label = v.get("public_title") or " / ".join(str(v.get(k)) for k in ("option1", "option2", "option3") if v.get(k)) \
             or v.get("title") or ""
         if str(label).strip().lower() in _SKIP_LABELS:
@@ -170,7 +184,7 @@ def jsonld(text):
 
 def read(url, text):
     """Offers for the first site type that finds two or more variations; [] when none does."""
-    for reader in (shopify, woocommerce, jsonld):
+    for reader in (lambda t: shopify(t, url), woocommerce, jsonld):
         offers = reader(text)
         if offers:
             return offers

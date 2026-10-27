@@ -53,6 +53,15 @@ class Readers(unittest.TestCase):
         self.assertEqual([(o["label"], o["price_gbp"]) for o in v.shopify(text)],
                          [("1800W", 152.49), ("1200W", 126.14), ("USD", None)])
 
+    def test_shopify_takes_the_variants_of_the_product_in_the_link_not_a_recommended_one(self):
+        rec = '"variants":[{"id":901,"price":100,"title":"A"},{"id":902,"price":200,"title":"B"}]'
+        main = ('"handle":"dumbbell","variants":[{"id":11,"price":1499,"title":"1kg"},'
+                '{"id":12,"price":2299,"title":"2kg"}]')
+        text = page(f"<script>x={{{rec}}};y={{{main}}};</script>")
+        self.assertEqual([o["id"] for o in v.read("https://s.co.uk/products/dumbbell", text)], ["11", "12"])
+        self.assertEqual([o["id"] for o in v.read("https://s.co.uk/products/other?variant=12", text)], ["11", "12"])
+        self.assertEqual(v.read("https://s.co.uk/products/unknown", text), [])
+
     def test_shopify_single_default_variant_is_not_a_choice(self):
         one = page('<script type="application/json" data-product-json>{"variants":[{"id":1,"title":"Default Title","price":500}]}</script>')
         self.assertEqual(v.shopify(one), [])
