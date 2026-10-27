@@ -58,6 +58,7 @@ from .sc_urls import (AMAZON_ASIN_RE, EBAY_ITEM_RE, MASKURA_BASE, MASKURA_HOSTS,
                      maskura_url, normalize_maskura_url)
 from .sources import amazon as _amazon
 from .sources import ebay as _ebay
+from .sources import ebay_api as _ebay_api
 from .sources import generic as _generic
 from .sources import maskura as _maskura
 
@@ -758,6 +759,16 @@ def _parse(platform, url, r):
     return _generic.extract(url, r.content, declared_charset=getattr(r, "charset_encoding", None))
 
 
+class _ApiResponse:
+    """Stands in for the HTTP response of a lookup the eBay API answered."""
+    status_code = 200
+    content = b""
+    text = ""
+
+    def __init__(self, url):
+        self.url = url
+
+
 def _get(client, pacer, url, host):
     pacer.wait(host)
     return client.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT_S, follow_redirects=True)
@@ -797,8 +808,13 @@ def fetch_source(client, pacer, url) -> dict:
     retry_after = None
     gone_but_shown = False
     try:
-        resp = _get(client, pacer, url, host)
-        resp.raise_for_status()
+        res = _ebay_api.lookup(url) if platform == "ebay" else None
+        if res is not None:
+            # The official API answered cleanly: no page request, so no pacer slot is spent on it.
+            resp = _ApiResponse(url)
+        else:
+            resp = _get(client, pacer, url, host)
+            resp.raise_for_status()
     except UnsafeTarget:
         pacer.note(host, "error")
         return error_source(url, "Blocked: URL resolves to an internal address")
@@ -829,7 +845,7 @@ def fetch_source(client, pacer, url) -> dict:
 
     if resp is not None:
         try:
-            res = _parse(platform, url, resp)
+            res = res if res is not None else _parse(platform, url, resp)
             if platform == "ebay" and getattr(res, "state", "") == "shell":
                 # A script-only shell is often a transient answer: read it once more, through the
                 # pacer, unless the shell just started a cool-down.
